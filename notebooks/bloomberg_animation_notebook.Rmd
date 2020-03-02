@@ -1,0 +1,150 @@
+---
+title: "bloomberg_viz"
+output: html_document
+---
+
+```{r, warning = FALSE, message = FALSE}
+library(tidyverse)
+library(lubridate)
+library(gganimate)
+library(extrafont)
+extrafont::loadfonts()
+```
+
+
+```{r}
+warming_data <- read_csv("https://www.bloomberg.com/graphics/2015-whats-warming-the-world/data/observed.csv") %>%
+  janitor::clean_names() 
+
+forcings <- read_csv("https://www.bloomberg.com/graphics/2015-whats-warming-the-world/data/forcings.csv") %>%
+  janitor::clean_names() 
+
+temperature <- read_csv("https://www.bloomberg.com/graphics/2015-whats-warming-the-world/data/piControl.csv") %>%
+  janitor::clean_names()
+```
+
+
+```{r, fig.width=10, fig.height=5, dpi = 300}
+anim_p <- warming_data %>%
+  mutate(frame_label = paste0("1880-", year)) %>%
+  ggplot(aes(x=year, y=annual_mean)) +
+  geom_text(aes(x = 1947, y = -0.8, label = frame_label), size = 12, colour = "grey50") +
+  geom_line(size = 1.5, colour = "grey30") +
+  geom_label(aes(y=x5_year_mean), 
+             label = "Observed", 
+             fontface = "bold",
+             colour = "white", 
+             fill = "black") +
+  geom_label(data = tail(warming_data, 3), aes(y = annual_mean), 
+             label = "Observed", 
+             fontface = "bold", 
+             colour = "white", 
+             fill = "black") +
+  geom_hline(yintercept = -0.27, size = 0.2) +
+  scale_y_continuous("", 
+                     breaks = c(-1.27, -0.27, 0.73), 
+                     labels = c("-2 Fº", "1880-1910 \nAverage", "+2 Fº")) +
+  expand_limits(y= -1.27:0.73) +
+  scale_x_continuous(labels = NULL) +
+  
+  labs(title = "What's Really Warming the World?",
+       subtitle = "Skeptics of manmade climate change offer various natural causes to explain why \nthe Earth was warmed 1.4 degrees Fahrenheit since 1880. But can these account \nfor the planet's rising temperature? Scroll down to see how much different \nfactors, both natural and industrial, contribute to global warming, based on \nfindings from NASA's Goddard Institute for Space Studies.",
+       x = "") + 
+  geom_text(data = tail(warming_data, 1), 
+            x = 1975, 
+            y = -.4, 
+            label = 'This line shows the measured, or \n"Observed," land ocean temperature', 
+            size = 4, 
+            lineheight = 0.8,
+            colour = "grey50") +
+  geom_curve(data = tail(warming_data, 1), 
+             aes(x = 1960, 
+                 y = -0.4, 
+                 xend = 1956, 
+                 yend = -.2), 
+             colour = 'black', 
+             size = 1, 
+             curvature = -0.4,
+             arrow = arrow(length = unit(0.5, "cm"))) +
+  theme_minimal() +
+  theme(text = element_text(family = "Merriweather"),
+        panel.grid = element_blank(),
+        axis.line.y = element_line(),
+        plot.title = element_text(size = 30, hjust = 0.5, face = "bold"),
+        plot.subtitle = element_text(colour = "grey50", size = 16, hjust = 0.5)) +
+  transition_reveal(year)
+
+options(gganimate.dpi = 300)
+
+anim_save(animate(anim_p, 
+                  fps = 50,  duration = 9,
+                  width = 1000, height = 500,
+                  end_pause = 200,
+                  renderer = gifski_renderer(loop = FALSE)),
+          filename = "bloomberg_orginal.gif")
+```
+
+```{r}
+volcanic_data <- warming_data %>%
+  left_join(forcings, by = "year") %>%
+  mutate(frame_label = paste0("1880-", year)) 
+
+volcanic_mean <- volcanic_data %>%
+  summarize(volcanic_mean = mean(volcanic, na.rm = TRUE)) 
+
+volcanic_data %>%
+  mutate(volcanic = volcanic - volcanic_mean$volcanic_mean)
+```
+
+```{r, fig.width=10, fig.height=5, dpi = 300}
+ma <- function(x, n = 5){stats::filter(x, rep(1 / n, n), sides = 1)}
+
+anim_p2 <- volcanic_data %>%
+  mutate(volcanic = volcanic - volcanic_mean$volcanic_mean - 0.27) %>%
+  mutate(volcanic_x5_year_mean = ma(volcanic)) %>%
+  drop_na(volcanic) %>%
+  mutate(volc_year = year) %>%
+  ggplot(aes(x=volc_year, y=volcanic)) +
+  geom_text(aes(x = 1947, y = -0.8, label = frame_label), size = 12, colour = "grey50") +
+  geom_line(size = 1, colour = "#ff5349") +
+  geom_line(colour = "#ff5349", size = 12, alpha = 0.1) +
+  geom_line(data = warming_data, aes(x = year, y = annual_mean, group = 1), size = 1.5, colour = "grey30") +
+  geom_label(data = tail(warming_data, 1), aes(x = year, y = annual_mean, group = 1), 
+             label = "Observed", 
+             fontface = "bold",
+             colour = "white", 
+             fill = "black") +
+  geom_label(aes(y = volcanic_x5_year_mean),
+             label = "Volcanic", 
+             fontface = "bold",
+             colour = "white", 
+             fill = "#ff5349") +
+  geom_hline(yintercept = -0.27, size = 0.2) +
+  scale_y_continuous("", 
+                     breaks = c(-1.27, -0.27, 0.73), 
+                     labels = c("-2 Fº", "1880-1910 \nAverage", "+2 Fº")) +
+  expand_limits(y= -1.27:0.73) +
+  scale_x_continuous(labels = NULL) +
+  
+  labs(title = "Is it Volcanoes?",
+       subtitle = "The data suggests no. Human industry emits about 100 times more CO2 than \nvolcanic activity, and eruptions release sulfate chemicals that can actually cool \nthe atmosphere for a year or two.",
+       x = "") + 
+  
+  theme_minimal() +
+  theme(text = element_text(family = "Merriweather"),
+        panel.grid = element_blank(),
+        axis.line.y = element_line(),
+        plot.title = element_text(size = 30, hjust = 0.5, face = "bold"),
+        plot.subtitle = element_text(colour = "grey50", size = 16, hjust = 0.5)) +
+  
+  transition_reveal(volc_year)
+
+options(gganimate.dpi = 300)
+anim_save(animate(anim_p2, 
+                  fps = 50,  duration = 9,
+                  width = 1000, height = 500,
+                  end_pause = 200,
+                  renderer = gifski_renderer(loop = FALSE)),
+          filename = "bloomberg_volcano.gif")
+```
+
