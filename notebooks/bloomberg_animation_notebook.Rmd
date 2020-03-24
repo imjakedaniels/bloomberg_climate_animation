@@ -84,6 +84,90 @@ anim_save(animate(anim_p,
           filename = "bloomberg_orginal.gif")
 ```
 
+```{r, fig.width=10, fig.height=5, dpi = 300}
+ma <- function(x, n = 5){stats::filter(x, rep(1 / n, n), sides = 1)}
+```
+
+```{r}
+orbital_data <- warming_data %>%
+  left_join(forcings, by = "year") %>%
+  mutate(frame_label = paste0("1880-", year)) 
+
+orbital_mean <- orbital_data %>%
+  summarize(orbital_mean = mean(orbital_changes, na.rm = TRUE)) 
+
+orbital_final <- orbital_data %>%
+  mutate(orbital_changes = orbital_changes - orbital_mean$orbital_mean - 0.27) %>%
+  mutate(orbital_x5_year_mean = ma(orbital_changes)) %>%
+  drop_na(orbital_changes) %>%
+  mutate(orb_year = year)
+```
+
+```{r}
+anim_p2 <- orbital_final %>%
+  ggplot(aes(x=orb_year, y=orbital_changes)) +
+  geom_text(aes(x = 1947, y = -0.8, label = frame_label), size = 12, colour = "grey50") +
+  geom_line(size = 1, colour = "#ff5349") +
+  geom_line(colour = "#ff5349", size = 12, alpha = 0.1) +
+  geom_line(data = warming_data, aes(x = year, y = annual_mean, group = 1), size = 1.5, colour = "grey30") +
+  geom_label(data = tail(warming_data, 1), aes(x = year, y = annual_mean, group = 1), 
+             label = "Orbital changes", 
+             fontface = "bold",
+             colour = "white", 
+             fill = "black") +
+  geom_label(aes(y = orbital_x5_year_mean),
+             label = "Orbital changes", 
+             fontface = "bold",
+             colour = "white", 
+             fill = "lightblue") +
+  geom_hline(yintercept = -0.27, size = 0.2) +
+  scale_y_continuous("", 
+                     breaks = c(-1.27, -0.27, 0.73), 
+                     labels = c("-2 Fº", "1880-1910 \nAverage", "+2 Fº")) +
+  expand_limits(y= -1.27:0.73) +
+  scale_x_continuous(labels = NULL) +
+  
+  labs(title = "Is it the Earth's Orbit?",
+       subtitle = "The Earth wobbles on its axis, and its tilt and orbit change over many thousands \nof years, pushing the climate into and out of ice ages. Yet the influence of orbital changes on the planet's temperature over 125 years has been negligible.",
+       x = "") + 
+  
+  geom_text(data = tail(warming_data, 1), 
+            x = 1996, 
+            y = -1, 
+            label = "This band shows where temparatures\n
+            fall in 95% of climate situations", 
+            size = 4, 
+            lineheight = 0.8,
+            colour = "grey50") +
+  geom_curve(data = tail(warming_data, 1), 
+             aes(x = 1996, 
+                 y = -.2, 
+                 xend = 1996, 
+                 yend = -.1), 
+             colour = 'black', 
+             size = 1, 
+             curvature = -1,
+             arrow = arrow(length = unit(0.5, "cm"))) +
+
+  theme_minimal() +
+    
+  theme(text = element_text(family = "Merriweather"),
+        panel.grid = element_blank(),
+        axis.line.y = element_line(),
+        plot.title = element_text(size = 30, hjust = 0.5, face = "bold"),
+        plot.subtitle = element_text(colour = "grey50", size = 16, hjust = 0.5)) +
+  
+  transition_reveal(orb_year)
+
+options(gganimate.dpi = 300)
+anim_save(animate(anim_p2, 
+                  fps = 10,  duration = 9,
+                  width = 1000, height = 500,
+                  end_pause = 200,
+                  renderer = gifski_renderer(loop = FALSE)),
+          filename = "bloomberg_volcano.gif")
+```
+
 ```{r}
 volcanic_data <- warming_data %>%
   left_join(forcings, by = "year") %>%
@@ -92,18 +176,15 @@ volcanic_data <- warming_data %>%
 volcanic_mean <- volcanic_data %>%
   summarize(volcanic_mean = mean(volcanic, na.rm = TRUE)) 
 
-volcanic_data %>%
-  mutate(volcanic = volcanic - volcanic_mean$volcanic_mean)
-```
-
-```{r, fig.width=10, fig.height=5, dpi = 300}
-ma <- function(x, n = 5){stats::filter(x, rep(1 / n, n), sides = 1)}
-
-anim_p2 <- volcanic_data %>%
+volcanic_final <- volcanic_data %>%
   mutate(volcanic = volcanic - volcanic_mean$volcanic_mean - 0.27) %>%
   mutate(volcanic_x5_year_mean = ma(volcanic)) %>%
   drop_na(volcanic) %>%
-  mutate(volc_year = year) %>%
+  mutate(volc_year = year)
+```
+
+```{r, fig.width=10, fig.height=5, dpi = 300}
+anim_p3 <- volcanic_final %>%
   ggplot(aes(x=volc_year, y=volcanic)) +
   geom_text(aes(x = 1947, y = -0.8, label = frame_label), size = 12, colour = "grey50") +
   geom_line(size = 1, colour = "#ff5349") +
@@ -140,11 +221,19 @@ anim_p2 <- volcanic_data %>%
   transition_reveal(volc_year)
 
 options(gganimate.dpi = 300)
-anim_save(animate(anim_p2, 
+anim_save(animate(anim_p3, 
                   fps = 50,  duration = 9,
                   width = 1000, height = 500,
                   end_pause = 200,
                   renderer = gifski_renderer(loop = FALSE)),
           filename = "bloomberg_volcano.gif")
+```
+
+```{r}
+
+```
+
+```{r}
+
 ```
 
