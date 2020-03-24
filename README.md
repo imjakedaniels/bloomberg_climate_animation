@@ -21,5 +21,5 @@ Article here: https://www.bloomberg.com/graphics/2015-whats-warming-the-world/
 </p>
 
 <p align="center">
-  <img src="https://github.com/imjakedaniels/bloomberg_climate_animation/blob/master/animations/bloomberg_greenhouse.gif.gif">
+  <img src="https://github.com/imjakedaniels/bloomberg_climate_animation/blob/master/animations/bloomberg_greenhouse.gif">
 </p>
